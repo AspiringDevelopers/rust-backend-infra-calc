@@ -1,14 +1,10 @@
 use axum::{
-    //extract::{Path, Query, State},
-    //http::StatusCode,
-    //response::Json,
-    routing::{/*delete*/ get, post /*put*/},
+    routing::{get, post},
     Router,
 };
-// use serde::{Deserialize, Serialize};
-// use std::collections::HashMap;
 use tower_http::cors::CorsLayer;
-use tracing::{info /*warn*/};
+use tower_http::services::ServeDir;
+use tracing::info;
 use tracing_subscriber::fmt::init;
 
 mod auth;
@@ -33,13 +29,25 @@ async fn main() -> anyhow::Result<()> {
     init();
 
     let config = AppConfig::from_env()?;
-    let db = Database::new(&config.database_url).await?;
+    let db = Database::new(&config.mongo_uri, &config.mongo_database, &config.mysql_dsn).await?;
 
+    let port = config.port;
+    let static_path = config.static_path.clone();
     let state = AppState { db, config };
 
+    let api_routes = Router::new()
+        .route("/auth/register", post(handlers::auth::api_register))
+        .route("/auth/login", post(handlers::auth::api_login))
+        .route("/auth/logout", post(handlers::auth::api_logout))
+        .route("/auth/me", get(handlers::auth::api_me))
+        .route("/files", get(handlers::save::list_files))
+        .with_state(state.clone());
+
     let app = Router::new()
-        .route("/", get(handlers::home))
-        .route("/dev", get(handlers::home))
+        .route("/", get(handlers::home_page))
+        .route("/dashboard", get(handlers::auth::dashboard_page))
+        .nest("/api", api_routes)
+        .route("/dev", get(handlers::home_page))
         .route(
             "/save",
             get(handlers::save::list_files).post(handlers::save::save_file),
@@ -107,11 +115,13 @@ async fn main() -> anyhow::Result<()> {
             get(handlers::business::handle_business_get)
                 .post(handlers::business::handle_business_post),
         )
+        .nest_service("/static", ServeDir::new(&static_path))
         .layer(CorsLayer::permissive())
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await?;
-    info!("Server starting on http://0.0.0.0:8080");
+    let addr = format!("0.0.0.0:{}", port);
+    let listener = tokio::net::TcpListener::bind(&addr).await?;
+    info!("Server starting on http://{}", addr);
 
     axum::serve(listener, app).await?;
     Ok(())

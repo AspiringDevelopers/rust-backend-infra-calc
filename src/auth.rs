@@ -5,10 +5,17 @@ use axum::{
     response::Response,
 };
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-//use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{models::Claims, AppState};
+use crate::AppState;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Claims {
+    pub sub: String, // subject (user email or id)
+    pub user_id: String,
+    pub exp: i64, // expiration time
+}
 
 pub fn hash_password(password: &str) -> anyhow::Result<String> {
     let cost = bcrypt::DEFAULT_COST;
@@ -27,6 +34,7 @@ pub fn create_jwt(user_id: Uuid, secret: &str) -> anyhow::Result<String> {
 
     let claims = Claims {
         sub: user_id.to_string(),
+        user_id: user_id.to_string(),
         exp: expiration,
     };
 

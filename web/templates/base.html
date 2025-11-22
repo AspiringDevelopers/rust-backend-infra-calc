@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}TouchCalc{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="nav-container">
+        <a href="/" class="nav-brand">TouchCalc</a>
+        <div class="nav-menu">
+          {% block nav %}
+          <a href="/login" class="nav-link">Login</a>
+          <a href="/register" class="nav-link">Register</a>
+          {% endblock %}
+        </div>
+      </div>
+    </nav>
+
+    <main class="container">{% block content %}{% endblock %}</main>
+
+    <footer class="footer">
+      <p>&copy; 2025 TouchCalc. All rights reserved.</p>
+    </footer>
+
+    <script src="/static/js/main.js"></script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

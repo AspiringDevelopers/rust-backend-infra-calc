@@ -19,7 +19,7 @@ impl EmailService {
 
         Self {
             client,
-            from_email: config.ses_from_email.clone(),
+            from_email: config.from_email.clone(),
         }
     }
 
