@@ -1,31 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}TouchCalc{% endblock %}</title>
-    <link rel="stylesheet" href="/static/css/style.css" />
-  </head>
-  <body>
-    <nav class="navbar">
-      <div class="nav-container">
-        <a href="/" class="nav-brand">TouchCalc</a>
-        <div class="nav-menu">
-          {% block nav %}
-          <a href="/login" class="nav-link">Login</a>
-          <a href="/register" class="nav-link">Register</a>
-          {% endblock %}
-        </div>
-      </div>
-    </nav>
-
-    <main class="container">{% block content %}{% endblock %}</main>
-
-    <footer class="footer">
-      <p>&copy; 2025 TouchCalc. All rights reserved.</p>
-    </footer>
-
-    <script src="/static/js/main.js"></script>
-    {% block scripts %}{% endblock %}
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{if .APP_TITLE}}{{.APP_TITLE}}{{else}}TouchCalc{{end}}</title>
+    <link rel="stylesheet" href="/static/css/socialcalc.css">
+    <link rel="stylesheet" href="/static/css/screen.css">
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/json2.js"></script>
+    <script src="/static/js/socialcalc-3.js"></script>
+    <script src="/static/js/socialcalcconstants.js"></script>
+    <script src="/static/js/socialcalcpopup.js"></script>
+    <script src="/static/js/socialcalcspreadsheetcontrol.js"></script>
+    <script src="/static/js/socialcalctableeditor.js"></script>
+    <script src="/static/js/socialcalcviewer.js"></script>
+    <script src="/static/js/socialcalcworkbook.js"></script>
+    <script src="/static/js/socialcalcworkbookcontrol.js"></script>
+    {{block "head" .}}{{end}}
+</head>
+<body>
+    {{block "content" .}}{{end}}
+</body>
 </html>

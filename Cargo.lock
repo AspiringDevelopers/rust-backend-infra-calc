@@ -137,6 +137,7 @@ dependencies = [
  "futures",
  "jsonwebtoken",
  "mime",
+ "mime_guess",
  "mongodb",
  "rand 0.9.2",
  "regex",
