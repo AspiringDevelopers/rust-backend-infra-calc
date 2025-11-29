@@ -111,57 +111,36 @@
 
       function initializeSocialCalc() {
         try {
-          console.log("=== Starting SocialCalc Initialization ===");
           updateStatus("Initializing SocialCalc...");
-
-          // Check dependencies
-          console.log("jQuery loaded:", typeof $ !== "undefined");
-          console.log("SocialCalc loaded:", typeof SocialCalc !== "undefined");
-          console.log(
-            "SocialCalc.SpreadsheetControl:",
-            typeof SocialCalc.SpreadsheetControl !== "undefined"
-          );
-
           // Correct image prefix for SC icons
           SocialCalc.Constants.defaultImagePrefix = "/static/images/sc-";
           updateStatus("SocialCalc constants configured...");
 
           // Create spreadsheet control
-          console.log("Creating SpreadsheetControl...");
           spreadsheet = new SocialCalc.SpreadsheetControl();
-          console.log("SpreadsheetControl created:", spreadsheet);
-
-          console.log("Initializing spreadsheet control...");
           spreadsheet.InitializeSpreadsheetControl(
             "spreadsheet-container",
             0,
             0,
             0
           );
-          console.log("InitializeSpreadsheetControl completed");
           updateStatus("Spreadsheet control created...");
 
           // Load initial data from server or use default SC format
           var initialData = `{{.sheetstr}}`;
-          console.log("Initial data length:", initialData.length);
-          console.log("Initial data preview:", initialData.substring(0, 100));
-
           if (
             initialData &&
             initialData.trim() !== "" &&
             initialData !== "{{.sheetstr}}"
           ) {
             try {
-              console.log("Parsing initial data...");
               spreadsheet.sheet.ParseSheetSave(initialData);
-              console.log("Initial data parsed successfully");
               updateStatus("Initial data loaded...");
             } catch (e) {
               console.error("Error parsing saved data:", e);
               loadDefaultData();
             }
           } else {
-            console.log("No initial data, loading defaults");
             loadDefaultData();
           }
 
@@ -169,10 +148,8 @@
           updateStatus(
             "✅ SocialCalc initialized successfully - Ready to use!"
           );
-          console.log("=== SocialCalc Initialization Complete ===");
         } catch (error) {
           console.error("Error initializing SocialCalc:", error);
-          console.error("Error stack:", error.stack);
           updateStatus("❌ Error: " + error.message);
           document.getElementById("spreadsheet-container").innerHTML =
             '<div style="padding:20px;color:red;text-align:center;">' +
@@ -180,7 +157,6 @@
             "<p>" +
             error.message +
             "</p>" +
-            "<p>Check browser console for details</p>" +
             "</div>";
         }
       }
@@ -254,29 +230,19 @@ part:end`;
 
       function checkDependencies() {
         var missing = [];
-        console.log("Checking dependencies...");
         if (typeof $ === "undefined") missing.push("jQuery");
         if (typeof JSON === "undefined") missing.push("JSON");
         if (typeof SocialCalc === "undefined") missing.push("SocialCalc");
-        console.log("jQuery:", typeof $);
-        console.log("JSON:", typeof JSON);
-        console.log("SocialCalc:", typeof SocialCalc);
-        if (missing.length > 0) {
-          console.error("Missing dependencies:", missing);
+        if (missing.length > 0)
           throw new Error("Missing dependencies: " + missing.join(", "));
-        }
-        console.log("All dependencies loaded successfully");
       }
 
-      console.log("=== Script loaded, waiting for document ready ===");
       $(document).ready(function () {
-        console.log("=== Document ready fired ===");
         try {
           checkDependencies();
           initializeSocialCalc();
         } catch (error) {
           console.error("Initialization failed:", error);
-          console.error("Error stack:", error.stack);
           updateStatus("❌ Failed to load: " + error.message);
         }
       });
