@@ -52,6 +52,15 @@ pub async fn home_page(State(_state): State<AppState>) -> impl IntoResponse {
     Html(html)
 }
 
+// Test page for debugging
+pub async fn test_page() -> impl IntoResponse {
+    let html = std::fs::read_to_string("web/templates/test-page.html").unwrap_or_else(|_| {
+        "<h1>Test Page Not Found</h1><p>Please ensure web/templates/test-page.html exists</p>"
+            .to_string()
+    });
+    Html(html)
+}
+
 // Helper function to get current user from cookie jar
 pub fn get_current_user(jar: &CookieJar) -> Option<String> {
     jar.get("user").and_then(|cookie| {

@@ -110,8 +110,15 @@ async fn handle_webapp_index(
     // Try to load existing spreadsheet data from storage first
     let mut msc_data = String::new();
 
-    // TODO: Load from storage when user system is properly implemented
-    // For now, just use file system defaults
+    // Try to load from storage if user exists
+    if !user.is_empty() {
+        // Construct path for stored data
+        let file_path = format!("home/{}/securestore/{}/{}.msc", user, app_name, app_name);
+
+        // TODO: Implement actual storage retrieval when DB is ready
+        // For now, just log the attempt
+        tracing::debug!("Would attempt to load from storage: {}", file_path);
+    }
 
     // If no stored data found, try file system
     if msc_data.is_empty() {
@@ -199,11 +206,17 @@ part:end
 
     // Simple template replacement (Go template format uses {{.variable}})
     let html = html.replace("{{.fname}}", &app_name);
-    // Escape the MSC data for JavaScript template literal (escape backticks and backslashes)
+
+    // Properly escape the MSC data for JavaScript
+    // Need to escape newlines, quotes, backticks, and backslashes for JS template literal
     let escaped_msc_data = msc_data
         .replace("\\", "\\\\") // Escape backslashes first
+        .replace("\r", "\\r") // Escape carriage returns
+        .replace("\n", "\\n") // Escape newlines
         .replace("`", "\\`") // Escape backticks
-        .replace("${", "\\${"); // Escape template literal expressions
+        .replace("${", "\\${") // Escape template literal expressions
+        .replace("\"", "\\\""); // Escape double quotes
+
     let html = html.replace("{{.sheetstr}}", &escaped_msc_data);
     let html = html.replace("{{.sessionid}}", &session_id);
     let html = html.replace("{{.dbLogin}}", if db_login { "1" } else { "0" });
