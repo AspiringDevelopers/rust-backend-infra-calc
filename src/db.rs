@@ -41,8 +41,7 @@ impl Database {
     }
 
     async fn connect_mysql(mysql_dsn: &str) -> Result<Pool<MySql>> {
-        let mysql_url = format!("mysql://{}", mysql_dsn);
-        let mysql_pool = Pool::<MySql>::connect(&mysql_url).await?;
+        let mysql_pool = Pool::<MySql>::connect(mysql_dsn).await?;
         Self::init_mysql_tables(&mysql_pool).await?;
         Ok(mysql_pool)
     }

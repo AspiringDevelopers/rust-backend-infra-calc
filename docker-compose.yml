@@ -1,6 +1,52 @@
-version: "3.8"
-
 services:
+  rust-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rust-backend-app
+    ports:
+      - "8080:8080"
+    environment:
+      - ENVIRONMENT=development
+      - PORT=8080
+      - COOKIE_SECRET=${COOKIE_SECRET:-11oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=}
+      - JWT_SECRET=${JWT_SECRET:-11oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=}
+      - STORAGE_BACKEND=${STORAGE_BACKEND:-minio}
+      - MONGO_URI=mongodb://mongodb:27017
+      - MONGO_DATABASE=${MONGO_DATABASE:-touchcalc}
+      - MYSQL_DSN=mysql://root:password@mysql:3306/touchcalc
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - S3_BUCKET=${S3_BUCKET:-aspiring-cloud-storage}
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_BUCKET=${MINIO_BUCKET:-touchcalc-storage}
+      - MINIO_SSL=${MINIO_SSL:-false}
+      - FROM_EMAIL=${FROM_EMAIL:-aspiring.investments@gmail.com}
+      - TEMPLATES_PATH=./web/templates
+      - STATIC_PATH=./web/static
+    env_file:
+      - .env
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - touchcalc-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # MongoDB service
   mongodb:
     image: mongo:7.0
     container_name: touchcalc-mongodb
@@ -8,12 +54,18 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_DATABASE: touchcalc
+      - MONGO_INITDB_DATABASE=touchcalc
     volumes:
       - mongodb_data:/data/db
     networks:
       - touchcalc-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
+  # MySQL service
   mysql:
     image: mysql:8.0
     container_name: touchcalc-mysql
@@ -21,14 +73,22 @@ services:
     ports:
       - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: touchcalc
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=touchcalc
+      - MYSQL_USER=touchcalc
+      - MYSQL_PASSWORD=touchcalc
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
       - touchcalc-network
     command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
+  # MinIO service (S3-compatible object storage)
   minio:
     image: minio/minio:latest
     container_name: touchcalc-minio
@@ -37,8 +97,8 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
     volumes:
       - minio_data:/data
     networks:
@@ -50,40 +110,13 @@ services:
       timeout: 20s
       retries: 3
 
-  app:
-    build: .
-    container_name: touchcalc-app
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    environment:
-      - ENVIRONMENT=development
-      - PORT=8080
-      - COOKIE_SECRET=${COOKIE_SECRET}
-      - STORAGE_BACKEND=${STORAGE_BACKEND}
-      - MONGO_URI=mongodb://mongodb:27017
-      - MONGO_DATABASE=touchcalc
-      - MYSQL_DSN=root:password@tcp(mysql:3306)/touchcalc
-      - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
-      - MINIO_BUCKET=touchcalc-storage
-      - MINIO_SSL=false
-      - FROM_EMAIL=${FROM_EMAIL}
-      - JWT_SECRET=${JWT_SECRET}
-    depends_on:
-      - mongodb
-      - mysql
-      - minio
-    networks:
-      - touchcalc-network
-    volumes:
-      - ./web:/app/web
-
 volumes:
   mongodb_data:
+    driver: local
   mysql_data:
+    driver: local
   minio_data:
+    driver: local
 
 networks:
   touchcalc-network:

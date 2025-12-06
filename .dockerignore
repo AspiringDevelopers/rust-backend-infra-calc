@@ -1,0 +1,47 @@
+# Rust build artifacts
+target/
+debug/
+release/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+README.md
+QUICKSTART.md
+*.md
+
+# Docker
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Go backend (not part of this project)
+go-backend-touch-calc/
+
+# Test files
+tests/
+*.test
+
+# Cache
+cache/
