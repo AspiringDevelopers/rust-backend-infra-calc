@@ -34,8 +34,8 @@ pub async fn handle_landing(State(state): State<AppState>, jar: CookieJar) -> im
             .to_string()
     });
 
-    // Simple template variable replacement
-    let html = html.replace("{{ user }}", &user.unwrap_or_else(|| "Guest".to_string()));
+    let user_display = user.unwrap_or_else(|| "Guest".to_string());
+    let html = html.replace("{{ user }}", &user_display);
     let html = html.replace("{{ storage_backend }}", &state.config.storage_backend);
     let html = html.replace("{{ environment }}", &state.config.environment);
     let html = html.replace(

@@ -26,7 +26,6 @@ use axum::{
 use axum_extra::extract::cookie::CookieJar;
 use serde_json::json;
 
-// Health check endpoint
 pub async fn health_check(State(state): State<AppState>) -> Json<serde_json::Value> {
     Json(json!({
         "status": "healthy",
@@ -36,11 +35,10 @@ pub async fn health_check(State(state): State<AppState>) -> Json<serde_json::Val
     }))
 }
 
-// Home route - redirect based on auth
 pub async fn home(jar: CookieJar) -> Result<Redirect, Redirect> {
     if let Some(cookie) = jar.get("user") {
         if !cookie.value().is_empty() {
-            return Ok(Redirect::to("/save"));
+            return Ok(Redirect::to("/dashboard"));
         }
     }
     Ok(Redirect::to("/login"))
@@ -52,7 +50,6 @@ pub async fn home_page(State(_state): State<AppState>) -> impl IntoResponse {
     Html(html)
 }
 
-// Test page for debugging
 pub async fn test_page() -> impl IntoResponse {
     let html = std::fs::read_to_string("web/templates/test-page.html").unwrap_or_else(|_| {
         "<h1>Test Page Not Found</h1><p>Please ensure web/templates/test-page.html exists</p>"
@@ -61,22 +58,17 @@ pub async fn test_page() -> impl IntoResponse {
     Html(html)
 }
 
-// Helper function to get current user from cookie jar
 pub fn get_current_user(jar: &CookieJar) -> Option<String> {
     jar.get("user").and_then(|cookie| {
         let value = cookie.value();
-        // Handle both JSON format and plain text format
         if value.starts_with('"') && value.ends_with('"') {
-            // JSON format
             serde_json::from_str::<String>(value).ok()
         } else {
-            // Plain text format
             Some(value.to_string())
         }
     })
 }
 
-// Helper to set current user cookie
 pub fn create_user_cookie(email: &str) -> axum_extra::extract::cookie::Cookie<'static> {
     let user_json = serde_json::to_string(email).unwrap_or_else(|_| format!("\"{}\"", email));
     axum_extra::extract::cookie::Cookie::build(("user", user_json))
@@ -86,7 +78,6 @@ pub fn create_user_cookie(email: &str) -> axum_extra::extract::cookie::Cookie<'s
         .build()
 }
 
-// Helper to clear user cookie
 pub fn clear_user_cookie() -> axum_extra::extract::cookie::Cookie<'static> {
     axum_extra::extract::cookie::Cookie::build(("user", ""))
         .path("/")
