@@ -1,15 +1,15 @@
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Path, State},
     http::StatusCode,
-    response::{Html, IntoResponse, Json, Redirect},
+    response::{Html, IntoResponse, Redirect},
 };
 use axum_extra::extract::cookie::{Cookie, CookieJar};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::json;
-use std::collections::HashMap;
 
 use crate::{handlers::get_current_user, AppState};
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct DropboxQuery {
     action: Option<String>,
@@ -79,10 +79,7 @@ pub async fn handle_amazon_webapp(
     let session_id = jar
         .get("session")
         .map(|c| c.value().to_string())
-        .unwrap_or_else(|| {
-            let id = uuid::Uuid::new_v4().to_string();
-            id
-        });
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
 
     if param2 == "index.html" {
         Ok(

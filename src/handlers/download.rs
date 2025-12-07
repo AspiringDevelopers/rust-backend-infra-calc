@@ -2,9 +2,11 @@ use crate::{models::ApiResponse, AppState};
 use axum::{extract::State, response::Json, Form};
 use serde::Deserialize;
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct DownloadForm {
     pub r#type: String,
+    #[allow(dead_code)]
     pub content: String,
 }
 

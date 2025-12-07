@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct Database {
+    #[allow(dead_code)]
     mongo_client: MongoClient,
     mongo_db: MongoDatabase,
     mysql_pool: Option<Pool<MySql>>,

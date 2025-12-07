@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use crate::{models::ApiResponse, AppState};
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct WebAppQuery {
     pub action: String,
@@ -22,18 +23,23 @@ pub struct WebAppForm {
     pub appname: Option<String>,
     pub fname: Option<String>,
     pub data: Option<String>,
+    #[allow(dead_code)]
     pub uuid: Option<String>,
+    #[allow(dead_code)]
     pub password: Option<String>,
     #[serde(rename = "deviceId")]
+    #[allow(dead_code)]
     pub device_id: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize)]
 pub struct InAppStatus {
     pub owned: i32,
     pub consumed: i32,
 }
 
+#[allow(dead_code)]
 pub async fn handle_webapp(
     State(state): State<AppState>,
     Extension(user_id): Extension<Uuid>,
@@ -85,12 +91,22 @@ pub async fn handle_webapp_post(
             // Save file
             match state.db.get_file(user_id, &file_path).await {
                 Ok(Some(_)) => {
-                    if let Err(_) = state.db.update_file(user_id, &file_path, &data).await {
+                    if state
+                        .db
+                        .update_file(user_id, &file_path, &data)
+                        .await
+                        .is_err()
+                    {
                         return Err(StatusCode::INTERNAL_SERVER_ERROR);
                     }
                 }
                 Ok(None) => {
-                    if let Err(_) = state.db.create_file(user_id, &file_path, &data).await {
+                    if state
+                        .db
+                        .create_file(user_id, &file_path, &data)
+                        .await
+                        .is_err()
+                    {
                         return Err(StatusCode::INTERNAL_SERVER_ERROR);
                     }
                 }
@@ -108,7 +124,12 @@ pub async fn handle_webapp_post(
             // Check if file exists before updating
             match state.db.get_file(user_id, &file_path).await {
                 Ok(Some(_)) => {
-                    if let Err(_) = state.db.update_file(user_id, &file_path, &data).await {
+                    if state
+                        .db
+                        .update_file(user_id, &file_path, &data)
+                        .await
+                        .is_err()
+                    {
                         return Err(StatusCode::INTERNAL_SERVER_ERROR);
                     }
                     Ok(Json(ApiResponse::success(json!({"result": "ok"}))))
@@ -136,7 +157,7 @@ pub async fn handle_webapp_post(
             let fname = form.fname.unwrap_or_default();
             let file_path = format!("home/securestore/{}/{}", app_name, fname);
 
-            if let Err(_) = state.db.delete_file(user_id, &file_path).await {
+            if state.db.delete_file(user_id, &file_path).await.is_err() {
                 return Err(StatusCode::INTERNAL_SERVER_ERROR);
             }
 
@@ -153,7 +174,7 @@ pub async fn handle_webapp_post(
 
             let entries: Vec<String> = files
                 .into_iter()
-                .map(|file| file.path.split('/').last().unwrap_or("").to_string())
+                .map(|file| file.path.split('/').next_back().unwrap_or("").to_string())
                 .collect();
 
             Ok(Json(ApiResponse::success(json!({
@@ -176,10 +197,11 @@ pub async fn handle_webapp_post(
                 purchase.consumed = 0;
             }
 
-            if let Err(_) = state
+            if state
                 .db
                 .update_purchase(user_id, &app_name, purchase.owned, purchase.consumed)
                 .await
+                .is_err()
             {
                 return Err(StatusCode::INTERNAL_SERVER_ERROR);
             }
@@ -189,7 +211,12 @@ pub async fn handle_webapp_post(
         "purchase" => {
             let app_name = form.appname.unwrap_or_default();
 
-            if let Err(_) = state.db.update_purchase(user_id, &app_name, 10, 0).await {
+            if state
+                .db
+                .update_purchase(user_id, &app_name, 10, 0)
+                .await
+                .is_err()
+            {
                 return Err(StatusCode::INTERNAL_SERVER_ERROR);
             }
 

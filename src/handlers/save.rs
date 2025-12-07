@@ -9,12 +9,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fs;
 
-use crate::{
-    handlers::get_current_user,
-    models::ApiResponse,
-    AppState,
-};
+use crate::{handlers::get_current_user, AppState};
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct SaveForm {
     pub fname: String,
@@ -27,6 +24,7 @@ struct FileEntry {
 }
 
 // Combined handler for GET and POST /save
+#[allow(dead_code)]
 pub async fn handle_save<B>(
     State(state): State<AppState>,
     jar: CookieJar,
@@ -42,10 +40,7 @@ pub async fn handle_save<B>(
     }
 }
 
-pub async fn handle_save_get(
-    State(_state): State<AppState>,
-    jar: CookieJar,
-) -> impl IntoResponse {
+pub async fn handle_save_get(State(_state): State<AppState>, jar: CookieJar) -> impl IntoResponse {
     let user = match get_current_user(&jar) {
         Some(u) => u,
         None => return Redirect::to("/login").into_response(),
@@ -55,9 +50,9 @@ pub async fn handle_save_get(
 
     // TODO: Get user's files from storage
     // For now, return a default file list
-    let entries = vec![
-        FileEntry { fname: "default".to_string() },
-    ];
+    let entries = vec![FileEntry {
+        fname: "default".to_string(),
+    }];
 
     println!("DEBUG: Found {} files for user {}", entries.len(), user);
 
@@ -96,7 +91,8 @@ pub async fn handle_save_post(
             return Json(json!({
                 "result": "fail",
                 "data": "usererror"
-            })).into_response()
+            }))
+            .into_response()
         }
     };
 
@@ -107,5 +103,6 @@ pub async fn handle_save_post(
     Json(json!({
         "result": "ok",
         "data": "saved"
-    })).into_response()
+    }))
+    .into_response()
 }

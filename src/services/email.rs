@@ -23,6 +23,7 @@ impl EmailService {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn send_email(&self, to: &str, subject: &str, body: &str) -> Result<(), Error> {
         let dest = Destination::builder().to_addresses(to).build();
 

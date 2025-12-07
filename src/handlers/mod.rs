@@ -20,7 +20,6 @@ pub mod webapp;
 use crate::AppState;
 use axum::{
     extract::State,
-    http::StatusCode,
     response::{Html, IntoResponse, Json, Redirect},
 };
 use axum_extra::extract::cookie::CookieJar;
@@ -44,12 +43,14 @@ pub async fn home(jar: CookieJar) -> Result<Redirect, Redirect> {
     Ok(Redirect::to("/login"))
 }
 
+#[allow(dead_code)]
 pub async fn home_page(State(_state): State<AppState>) -> impl IntoResponse {
     let html = std::fs::read_to_string("web/templates/home.html")
         .unwrap_or_else(|_| "<h1>Welcome to TouchCalc</h1>".to_string());
     Html(html)
 }
 
+#[allow(dead_code)]
 pub async fn test_page() -> impl IntoResponse {
     let html = std::fs::read_to_string("web/templates/test-page.html").unwrap_or_else(|_| {
         "<h1>Test Page Not Found</h1><p>Please ensure web/templates/test-page.html exists</p>"

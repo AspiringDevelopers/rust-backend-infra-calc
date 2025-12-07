@@ -6,17 +6,20 @@ use axum::{
 };
 use serde::Deserialize;
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct ImageQuery {
     pub fname: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct ImageForm {
     pub content: String,
     pub suffix: String,
 }
 
+#[allow(dead_code)]
 pub async fn get_image(
     State(_state): State<AppState>,
     Query(query): Query<ImageQuery>,
@@ -27,6 +30,7 @@ pub async fn get_image(
     })))
 }
 
+#[allow(dead_code)]
 pub async fn upload_image(
     State(_state): State<AppState>,
     Form(form): Form<ImageForm>,

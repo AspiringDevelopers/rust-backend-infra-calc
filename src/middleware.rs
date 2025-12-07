@@ -1,12 +1,12 @@
 use axum::{
     extract::Request,
-    http::StatusCode,
     middleware::Next,
     response::{IntoResponse, Redirect, Response},
 };
 use axum_extra::extract::cookie::CookieJar;
 use tower_http::cors::CorsLayer;
 
+#[allow(dead_code)]
 pub fn cors() -> CorsLayer {
     CorsLayer::permissive()
 }

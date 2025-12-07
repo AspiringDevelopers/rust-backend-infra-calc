@@ -4,6 +4,7 @@ use axum::{
     response::Json,
 };
 
+#[allow(dead_code)]
 pub async fn handle_amazon_webapp(
     State(_state): State<AppState>,
     Path((app, param)): Path<(String, String)>,

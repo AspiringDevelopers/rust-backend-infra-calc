@@ -8,11 +8,13 @@ use axum::{
 use serde::Deserialize;
 use uuid::Uuid;
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct InsertForm {
     pub filename: String,
 }
 
+#[allow(dead_code)]
 pub async fn get_file(
     State(state): State<AppState>,
     Extension(user_id): Extension<Uuid>,

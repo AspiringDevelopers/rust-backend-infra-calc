@@ -1,19 +1,19 @@
 use axum::{
     extract::{Query, State},
-    http::{StatusCode, header},
+    http::StatusCode,
     response::{Html, IntoResponse, Json, Redirect, Response},
     Form,
 };
 use axum_extra::extract::cookie::{Cookie, CookieJar};
-use serde::{Deserialize, Serialize};
-use serde_json::json;
+use base64::{engine::general_purpose, Engine as _};
 use rand::Rng;
-use base64::{Engine as _, engine::general_purpose};
+use serde::Deserialize;
+use serde_json::json;
 
 use crate::{
     auth::{hash_password, verify_password},
+    handlers::{clear_user_cookie, create_user_cookie, get_current_user},
     AppState,
-    handlers::{get_current_user, create_user_cookie, clear_user_cookie},
 };
 
 #[derive(Debug, Deserialize)]
@@ -37,6 +37,7 @@ pub struct RegisterRequest {
     pwd: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct PasswordResetQuery {
     u: String,
@@ -56,8 +57,8 @@ pub struct LostPasswordRequest {
 
 // HTML Page handlers
 pub async fn login_page() -> impl IntoResponse {
-    let html = std::fs::read_to_string("web/templates/login.html")
-        .unwrap_or_else(|_| r#"<!DOCTYPE html>
+    let html = std::fs::read_to_string("web/templates/login.html").unwrap_or_else(|_| {
+        r#"<!DOCTYPE html>
 <html><head><title>Login</title></head>
 <body><h1>Login</h1>
 <form method="post" action="/login">
@@ -66,13 +67,15 @@ pub async fn login_page() -> impl IntoResponse {
 <button type="submit">Login</button>
 </form>
 <a href="/register">Register</a>
-</body></html>"#.to_string());
+</body></html>"#
+            .to_string()
+    });
     Html(html)
 }
 
 pub async fn register_page() -> impl IntoResponse {
-    let html = std::fs::read_to_string("web/templates/register.html")
-        .unwrap_or_else(|_| r#"<!DOCTYPE html>
+    let html = std::fs::read_to_string("web/templates/register.html").unwrap_or_else(|_| {
+        r#"<!DOCTYPE html>
 <html><head><title>Register</title></head>
 <body><h1>Register</h1>
 <form method="post" action="/register">
@@ -81,33 +84,39 @@ pub async fn register_page() -> impl IntoResponse {
 <button type="submit">Register</button>
 </form>
 <a href="/login">Login</a>
-</body></html>"#.to_string());
+</body></html>"#
+            .to_string()
+    });
     Html(html)
 }
 
 pub async fn lost_password_page() -> impl IntoResponse {
-    let html = std::fs::read_to_string("web/templates/lostpassword.html")
-        .unwrap_or_else(|_| r#"<!DOCTYPE html>
+    let html = std::fs::read_to_string("web/templates/lostpassword.html").unwrap_or_else(|_| {
+        r#"<!DOCTYPE html>
 <html><head><title>Lost Password</title></head>
 <body><h1>Reset Password</h1>
 <form method="post">
 <input type="email" name="email" placeholder="Email" required />
 <button type="submit">Send Reset Link</button>
-</form></body></html>"#.to_string());
+</form></body></html>"#
+            .to_string()
+    });
     Html(html)
 }
 
 pub async fn password_reset_page(Query(query): Query<PasswordResetQuery>) -> impl IntoResponse {
-    let html = std::fs::read_to_string("web/templates/pwreset.html")
-        .unwrap_or_else(|_| r#"<!DOCTYPE html>
+    let html = std::fs::read_to_string("web/templates/pwreset.html").unwrap_or_else(|_| {
+        r#"<!DOCTYPE html>
 <html><head><title>Password Reset</title></head>
 <body><h1>Reset Your Password</h1>
 <form method="post">
 <input type="hidden" name="email" value="{{ reguser }}" />
 <input type="password" name="password" placeholder="New Password" required />
 <button type="submit">Reset Password</button>
-</form></body></html>"#.to_string());
-    
+</form></body></html>"#
+            .to_string()
+    });
+
     let html = html.replace("{{ reguser }}", &query.u);
     Html(html)
 }
@@ -129,9 +138,7 @@ pub async fn handle_iauth(
             let password = req.pwd.ok_or(StatusCode::BAD_REQUEST)?;
             handle_register_internal(state, jar, email, password, true).await
         }
-        "logout" => {
-            Ok(handle_logout_internal(jar, true).into_response())
-        }
+        "logout" => Ok(handle_logout_internal(jar, true).into_response()),
         _ => Err(StatusCode::BAD_REQUEST),
     }
 }
@@ -175,10 +182,10 @@ async fn handle_login_internal(
             return Ok(Json(json!({
                 "data": "usererror",
                 "result": "fail"
-            })).into_response());
+            }))
+            .into_response());
         } else {
-            let html = std::fs::read_to_string("web/templates/login.html")
-                .unwrap_or_default();
+            let html = std::fs::read_to_string("web/templates/login.html").unwrap_or_default();
             let html = html.replace("{{ error }}", "Please enter a valid email address");
             return Ok(Html(html).into_response());
         }
@@ -192,10 +199,10 @@ async fn handle_login_internal(
                 return Ok(Json(json!({
                     "data": "authfail",
                     "result": "fail"
-                })).into_response());
+                }))
+                .into_response());
             } else {
-                let html = std::fs::read_to_string("web/templates/login.html")
-                    .unwrap_or_default();
+                let html = std::fs::read_to_string("web/templates/login.html").unwrap_or_default();
                 let html = html.replace("{{ error }}", "User does not exist");
                 return Ok(Html(html).into_response());
             }
@@ -212,10 +219,10 @@ async fn handle_login_internal(
             return Ok(Json(json!({
                 "data": "authfail",
                 "result": "fail"
-            })).into_response());
+            }))
+            .into_response());
         } else {
-            let html = std::fs::read_to_string("web/templates/login.html")
-                .unwrap_or_default();
+            let html = std::fs::read_to_string("web/templates/login.html").unwrap_or_default();
             let html = html.replace("{{ error }}", "Invalid email or password");
             return Ok(Html(html).into_response());
         }
@@ -225,10 +232,14 @@ async fn handle_login_internal(
     let jar = jar.add(create_user_cookie(&email));
 
     if is_json {
-        Ok((jar, Json(json!({
-            "data": "success",
-            "result": "ok"
-        }))).into_response())
+        Ok((
+            jar,
+            Json(json!({
+                "data": "success",
+                "result": "ok"
+            })),
+        )
+            .into_response())
     } else {
         Ok((jar, Redirect::to("/browser")).into_response())
     }
@@ -250,10 +261,10 @@ async fn handle_register_internal(
                 "data": "usererror",
                 "result": "fail",
                 "message": "Invalid email format"
-            })).into_response());
+            }))
+            .into_response());
         } else {
-            let html = std::fs::read_to_string("web/templates/register.html")
-                .unwrap_or_default();
+            let html = std::fs::read_to_string("web/templates/register.html").unwrap_or_default();
             let html = html.replace("{{ error }}", "Please enter a valid email address");
             return Ok(Html(html).into_response());
         }
@@ -267,10 +278,11 @@ async fn handle_register_internal(
                     "data": "userexists",
                     "result": "fail",
                     "message": "User already exists"
-                })).into_response());
+                }))
+                .into_response());
             } else {
-                let html = std::fs::read_to_string("web/templates/register.html")
-                    .unwrap_or_default();
+                let html =
+                    std::fs::read_to_string("web/templates/register.html").unwrap_or_default();
                 let html = html.replace("{{ error }}", "User already exists");
                 return Ok(Html(html).into_response());
             }
@@ -295,19 +307,23 @@ async fn handle_register_internal(
     match state.db.create_user(&email, &password_hash).await {
         Ok(_) => {
             tracing::info!("User created successfully: {}", email);
-            
+
             // TODO: Create user directories in storage
             // This would be implemented based on the storage backend
-            
+
             // Set user cookie
             let jar = jar.add(create_user_cookie(&email));
-            
+
             if is_json {
-                Ok((jar, Json(json!({
-                    "data": "success",
-                    "result": "ok",
-                    "message": "Registration successful"
-                }))).into_response())
+                Ok((
+                    jar,
+                    Json(json!({
+                        "data": "success",
+                        "result": "ok",
+                        "message": "Registration successful"
+                    })),
+                )
+                    .into_response())
             } else {
                 Ok((jar, Redirect::to("/browser")).into_response())
             }
@@ -321,14 +337,18 @@ async fn handle_register_internal(
 
 fn handle_logout_internal(jar: CookieJar, is_json: bool) -> Response {
     tracing::info!("Logging out user");
-    
+
     let jar = jar.add(clear_user_cookie());
     let jar = jar.remove(Cookie::from("session"));
-    
+
     if is_json {
-        (jar, Json(json!({
-            "result": "ok"
-        }))).into_response()
+        (
+            jar,
+            Json(json!({
+                "result": "ok"
+            })),
+        )
+            .into_response()
     } else {
         (jar, Redirect::to("/browser")).into_response()
     }
@@ -344,13 +364,13 @@ pub async fn lost_password(
         Ok(Some(user)) => {
             // Generate dongle
             let dongle = generate_random_string(20);
-            
+
             // Save dongle to user
             let _ = state.db.set_user_dongle(user.id, &dongle).await;
-            
+
             // In real implementation, send email here
             tracing::info!("Password reset requested for: {}", form.email);
-            
+
             let html = std::fs::read_to_string("web/templates/lostpassword-sentemail.html")
                 .unwrap_or_else(|_| "<h1>Password reset email sent</h1>".to_string());
             let html = html.replace("{{ reguser }}", &form.email);
@@ -378,7 +398,7 @@ pub async fn password_reset(
                 Ok(hash) => hash,
                 Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
             };
-            
+
             // Update password
             match state.db.update_user_password(user.id, &password_hash).await {
                 Ok(_) => {
@@ -412,8 +432,11 @@ pub async fn api_login(
     jar: CookieJar,
     Json(payload): Json<LoginRequest>,
 ) -> Result<(CookieJar, Json<serde_json::Value>), StatusCode> {
-    let password = payload.password.or(payload.pwd).ok_or(StatusCode::BAD_REQUEST)?;
-    
+    let password = payload
+        .password
+        .or(payload.pwd)
+        .ok_or(StatusCode::BAD_REQUEST)?;
+
     // Get user
     let user = match state.db.get_user_by_email(&payload.email).await {
         Ok(Some(user)) => user,
@@ -466,8 +489,11 @@ pub async fn api_register(
     jar: CookieJar,
     Json(payload): Json<RegisterRequest>,
 ) -> Result<(CookieJar, Json<serde_json::Value>), StatusCode> {
-    let password = payload.password.or(payload.pwd).ok_or(StatusCode::BAD_REQUEST)?;
-    
+    let password = payload
+        .password
+        .or(payload.pwd)
+        .ok_or(StatusCode::BAD_REQUEST)?;
+
     // Validate email
     if !payload.email.contains('@') {
         return Ok((
@@ -512,10 +538,10 @@ pub async fn api_register(
     match state.db.create_user(&payload.email, &password_hash).await {
         Ok(user) => {
             tracing::info!("User created successfully: {}", payload.email);
-            
+
             // Set user cookie
             let jar = jar.add(create_user_cookie(&payload.email));
-            
+
             Ok((
                 jar,
                 Json(json!({
@@ -539,7 +565,7 @@ pub async fn api_register(
 pub async fn api_logout(jar: CookieJar) -> (CookieJar, Json<serde_json::Value>) {
     let jar = jar.add(clear_user_cookie());
     let jar = jar.remove(Cookie::from("session"));
-    
+
     (
         jar,
         Json(json!({
@@ -553,14 +579,11 @@ pub async fn api_me(
     jar: CookieJar,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     if let Some(user_email) = get_current_user(&jar) {
-        match state.db.get_user_by_email(&user_email).await {
-            Ok(Some(user)) => {
-                return Ok(Json(json!({
-                    "email": user.email,
-                    "id": user.id
-                })));
-            }
-            _ => {}
+        if let Ok(Some(user)) = state.db.get_user_by_email(&user_email).await {
+            return Ok(Json(json!({
+                "email": user.email,
+                "id": user.id
+            })));
         }
     }
 

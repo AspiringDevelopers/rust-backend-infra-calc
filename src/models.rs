@@ -33,24 +33,28 @@ pub struct InAppPurchase {
     pub updated_at: DateTime<Utc>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LoginRequest {
     pub email: String,
     pub password: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RegisterRequest {
     pub email: String,
     pub password: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SaveFileRequest {
     pub fname: String,
     pub data: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WebAppRequest {
     pub action: String,
@@ -59,6 +63,7 @@ pub struct WebAppRequest {
     pub data: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EmailRequest {
     pub to: String,
@@ -84,6 +89,7 @@ impl<T> ApiResponse<T> {
         }
     }
 
+    #[allow(dead_code)]
     pub fn success_simple() -> Self
     where
         T: Default,
@@ -104,6 +110,7 @@ impl<T> ApiResponse<T> {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileListEntry {
     pub fname: String,
@@ -111,12 +118,14 @@ pub struct FileListEntry {
     pub updated_at: DateTime<Utc>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: String, // User ID
     pub exp: i64,    // Expiration time
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SessionData {
     pub user_id: Uuid,

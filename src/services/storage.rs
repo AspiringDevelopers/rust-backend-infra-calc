@@ -8,12 +8,14 @@ use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::Client;
 use aws_smithy_types::error::metadata::ProvideErrorMetadata;
 
+#[allow(dead_code)]
 pub struct StorageService {
     client: Client,
     bucket: String,
 }
 
 impl StorageService {
+    #[allow(dead_code)]
     pub async fn new(config: &AppConfig) -> Self {
         // Note: In a real implementation, you'd want to properly configure AWS credentials
         let client = Client::new(&aws_config::load_defaults(BehaviorVersion::latest()).await);
@@ -24,6 +26,7 @@ impl StorageService {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn put_object(&self, key: &str, data: &[u8]) -> Result<(), SdkError<PutObjectError>> {
         self.client
             .put_object()
@@ -36,6 +39,7 @@ impl StorageService {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn get_object(&self, key: &str) -> Result<Vec<u8>> {
         let resp = self
             .client
@@ -49,6 +53,7 @@ impl StorageService {
         Ok(data.into_bytes().to_vec())
     }
 
+    #[allow(dead_code)]
     pub async fn delete_object(&self, key: &str) -> Result<(), SdkError<DeleteObjectError>> {
         self.client
             .delete_object()
@@ -60,6 +65,7 @@ impl StorageService {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn object_exists(&self, key: &str) -> anyhow::Result<bool> {
         match self
             .client

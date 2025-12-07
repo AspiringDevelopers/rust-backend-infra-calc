@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use crate::AppState;
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: String, // subject (user email or id)
@@ -26,6 +27,7 @@ pub fn verify_password(password: &str, hash: &str) -> bool {
     bcrypt::verify(password, hash).unwrap_or(false)
 }
 
+#[allow(dead_code)]
 pub fn create_jwt(user_id: Uuid, secret: &str) -> anyhow::Result<String> {
     let expiration = chrono::Utc::now()
         .checked_add_signed(chrono::Duration::hours(24))
@@ -47,6 +49,7 @@ pub fn create_jwt(user_id: Uuid, secret: &str) -> anyhow::Result<String> {
     Ok(token)
 }
 
+#[allow(dead_code)]
 pub fn verify_jwt(token: &str, secret: &str) -> anyhow::Result<Claims> {
     let token_data = decode::<Claims>(
         token,
@@ -57,6 +60,7 @@ pub fn verify_jwt(token: &str, secret: &str) -> anyhow::Result<Claims> {
     Ok(token_data.claims)
 }
 
+#[allow(dead_code)]
 pub async fn auth_middleware(
     State(state): State<AppState>,
     mut request: Request,
@@ -87,6 +91,7 @@ pub async fn auth_middleware(
     }
 }
 
+#[allow(dead_code)]
 pub fn generate_random_string(length: usize) -> String {
     use rand::Rng;
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
