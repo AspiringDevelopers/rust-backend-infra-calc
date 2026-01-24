@@ -32,7 +32,7 @@ pub struct AppState {
 async fn main() -> anyhow::Result<()> {
     init();
 
-    let config = AppConfig::from_env()?;
+    let config = AppConfig::load().expect("Failed to load configuration");
     let db = Database::new(&config.mongo_uri, &config.mongo_database, &config.mysql_dsn).await?;
     let session_manager = SessionManager::new();
 

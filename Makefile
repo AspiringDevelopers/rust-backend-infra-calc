@@ -15,44 +15,44 @@ help:
 	@echo "  make status     - Show service status"
 
 build:
-	docker-compose build
+	docker compose build
 
 up:
-	docker-compose up -d
+	docker compose up -d
 
 down:
-	docker-compose down
+	docker compose down
 
 restart:
-	docker-compose restart
+	docker compose restart
 
 logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 logs-backend:
-	docker-compose logs -f rust-backend
+	docker compose logs -f rust-backend
 
 clean:
-	docker-compose down -v
+	docker compose down -v
 	docker system prune -f
 
 test:
-	docker-compose exec rust-backend cargo test
+	docker compose exec rust-backend cargo test
 
 shell:
-	docker-compose exec rust-backend sh
+	docker compose exec rust-backend sh
 
 db-shell:
-	docker-compose exec mongodb mongosh touchcalc
+	docker compose exec mongodb mongosh touchcalc
 
 mysql-shell:
-	docker-compose exec mysql mysql -u root -ppassword touchcalc
+	docker compose exec mysql mysql -u root -p$${MYSQL_ROOT_PASSWORD:-password} touchcalc
 
 status:
-	docker-compose ps
+	docker compose ps
 
 rebuild:
-	docker-compose up -d --build
+	docker compose up -d --build
 
 health:
 	@echo "Checking service health..."

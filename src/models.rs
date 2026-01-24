@@ -35,20 +35,6 @@ pub struct InAppPurchase {
 
 #[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
-pub struct LoginRequest {
-    pub email: String,
-    pub password: String,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RegisterRequest {
-    pub email: String,
-    pub password: String,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
 pub struct SaveFileRequest {
     pub fname: String,
     pub data: String,
@@ -116,18 +102,4 @@ pub struct FileListEntry {
     pub fname: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Claims {
-    pub sub: String, // User ID
-    pub exp: i64,    // Expiration time
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SessionData {
-    pub user_id: Uuid,
-    pub email: String,
 }

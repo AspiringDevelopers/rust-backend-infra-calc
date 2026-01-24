@@ -14,7 +14,7 @@ services:
       - STORAGE_BACKEND=${STORAGE_BACKEND:-minio}
       - MONGO_URI=mongodb://mongodb:27017
       - MONGO_DATABASE=${MONGO_DATABASE:-touchcalc}
-      - MYSQL_DSN=mysql://root:password@mysql:3306/touchcalc
+      - MYSQL_DSN=${MYSQL_DSN:-mysql://root:password@mysql/touchcalc}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_REGION=${AWS_REGION:-us-east-1}
@@ -71,12 +71,12 @@ services:
     container_name: touchcalc-mysql
     restart: unless-stopped
     ports:
-      - "3306:3306"
+      - "3307:3306"
     environment:
-      - MYSQL_ROOT_PASSWORD=password
-      - MYSQL_DATABASE=touchcalc
-      - MYSQL_USER=touchcalc
-      - MYSQL_PASSWORD=touchcalc
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-password}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-touchcalc}
+      - MYSQL_USER=${MYSQL_USER:-touchcalc}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-touchcalc}
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
@@ -97,8 +97,8 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=minioadmin
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
     volumes:
       - minio_data:/data
     networks:

@@ -214,7 +214,15 @@ async fn handle_login_internal(
     };
 
     // Verify password
-    if !verify_password(&password, &user.password_hash) {
+    let password_valid = match verify_password(&password, &user.password_hash) {
+        Ok(valid) => valid,
+        Err(e) => {
+            tracing::error!("Password verification error: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    if !password_valid {
         if is_json {
             return Ok(Json(json!({
                 "data": "authfail",
@@ -457,7 +465,15 @@ pub async fn api_login(
     };
 
     // Verify password
-    if !verify_password(&password, &user.password_hash) {
+    let password_valid = match verify_password(&password, &user.password_hash) {
+        Ok(valid) => valid,
+        Err(e) => {
+            tracing::error!("Password verification error: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    if !password_valid {
         return Ok((
             jar,
             Json(json!({

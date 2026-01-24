@@ -10,12 +10,11 @@ use uuid::Uuid;
 
 use crate::AppState;
 
-#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: String, // subject (user email or id)
+    pub sub: String,
     pub user_id: String,
-    pub exp: i64, // expiration time
+    pub exp: i64,
 }
 
 pub fn hash_password(password: &str) -> anyhow::Result<String> {
@@ -23,8 +22,8 @@ pub fn hash_password(password: &str) -> anyhow::Result<String> {
     bcrypt::hash(password, cost).map_err(Into::into)
 }
 
-pub fn verify_password(password: &str, hash: &str) -> bool {
-    bcrypt::verify(password, hash).unwrap_or(false)
+pub fn verify_password(password: &str, hash: &str) -> anyhow::Result<bool> {
+    bcrypt::verify(password, hash).map_err(Into::into)
 }
 
 #[allow(dead_code)]
