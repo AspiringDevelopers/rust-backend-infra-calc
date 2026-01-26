@@ -1951,8 +1951,8 @@ SocialCalc.Callbacks.CheckConstraints = function(editor, value)
 // this is for checkmark toggling
 SocialCalc.Callbacks.ToggleCell = function()
 {
-    // check what the current ecell is
     var control = SocialCalc.GetCurrentWorkBookControl();
+    if (!control || !control.workbook) return; // single-sheet SpreadsheetControl has no workbook
 
     var editor = control.workbook.spreadsheet.editor;
 

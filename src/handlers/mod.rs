@@ -35,10 +35,8 @@ pub async fn health_check(State(state): State<AppState>) -> Json<serde_json::Val
 }
 
 pub async fn home(jar: CookieJar) -> Result<Redirect, Redirect> {
-    if let Some(cookie) = jar.get("user") {
-        if !cookie.value().is_empty() {
-            return Ok(Redirect::to("/dashboard"));
-        }
+    if get_current_user_id(&jar).is_some() {
+        return Ok(Redirect::to("/dashboard"));
     }
     Ok(Redirect::to("/login"))
 }
@@ -70,19 +68,40 @@ pub fn get_current_user(jar: &CookieJar) -> Option<String> {
     })
 }
 
-pub fn create_user_cookie(email: &str) -> axum_extra::extract::cookie::Cookie<'static> {
+pub fn get_current_user_id(jar: &CookieJar) -> Option<uuid::Uuid> {
+    jar.get("user_id")
+        .and_then(|c| uuid::Uuid::parse_str(c.value()).ok())
+}
+
+/// Sets both "user" (email) and "user_id" (uuid) cookies so auth_guard can add Extension<Uuid>.
+pub fn create_user_cookie(
+    email: &str,
+    user_id: uuid::Uuid,
+) -> [axum_extra::extract::cookie::Cookie<'static>; 2] {
     let user_json = serde_json::to_string(email).unwrap_or_else(|_| format!("\"{}\"", email));
-    axum_extra::extract::cookie::Cookie::build(("user", user_json))
+    let user = axum_extra::extract::cookie::Cookie::build(("user", user_json))
         .path("/")
         .http_only(true)
         .max_age(time::Duration::days(30))
-        .build()
+        .build();
+    let user_id_cookie = axum_extra::extract::cookie::Cookie::build(("user_id", user_id.to_string()))
+        .path("/")
+        .http_only(true)
+        .max_age(time::Duration::days(30))
+        .build();
+    [user, user_id_cookie]
 }
 
-pub fn clear_user_cookie() -> axum_extra::extract::cookie::Cookie<'static> {
-    axum_extra::extract::cookie::Cookie::build(("user", ""))
+pub fn clear_user_cookie() -> [axum_extra::extract::cookie::Cookie<'static>; 2] {
+    let user = axum_extra::extract::cookie::Cookie::build(("user", ""))
         .path("/")
         .http_only(true)
         .max_age(time::Duration::seconds(0))
-        .build()
+        .build();
+    let user_id = axum_extra::extract::cookie::Cookie::build(("user_id", ""))
+        .path("/")
+        .http_only(true)
+        .max_age(time::Duration::seconds(0))
+        .build();
+    [user, user_id]
 }
