@@ -5,7 +5,6 @@ use axum::{
 };
 use axum_extra::extract::cookie::CookieJar;
 use tower_http::cors::CorsLayer;
-use uuid::Uuid;
 
 use crate::handlers::get_current_user_id;
 

@@ -53,8 +53,10 @@
     <script src="/static/js/jquery.min.js"></script>
     <script src="/static/js/json2.js"></script>
 
-    <!-- SocialCalc Core (Order is important! TableEditor must load before images/spreadsheetcontrol) -->
+    <!-- SocialCalc Core !! TableEditor before images/spreadsheetcontrol !! -->
     <script src="/static/js/socialcalcconstants.js"></script>
+    <script src="/static/js/formatnumber2.js"></script>
+    <script src="/static/js/formula1.js"></script>
     <script src="/static/js/socialcalc-3.js"></script>
     <script src="/static/js/socialcalctableeditor.js"></script>
     <script src="/static/js/socialcalcimages.js"></script>
@@ -168,17 +170,14 @@
       }
 
       function loadDefaultData() {
-        // Proper SocialCalc save format
-        var defaultData = `# SocialCalc Spreadsheet Control Save
-version:1.5
-part:sheet
+        //  ParseSheetSave does not accept '#' or 'part:end' lines
+        var defaultData = `version:1.5
 cell:A1:v:Welcome to TouchCalc
 cell:B1:v:Start editing here
 cell:A2:v:This is your spreadsheet
 cell:B2:v:You can edit any cell
 cell:A3:v:Data saves automatically
-sheet:c:5:r:10:tvf:1
-part:end`;
+sheet:c:5:r:10:tvf:1`;
         try {
           spreadsheet.sheet.ParseSheetSave(defaultData);
           updateStatus("Default content loaded...");
@@ -212,6 +211,7 @@ part:end`;
         updateStatus(saveType + " save in progress...");
         $.ajax({
           url: "/iwebapp",
+          type: "POST",
           method: "POST",
           data: {
             action: "save",
