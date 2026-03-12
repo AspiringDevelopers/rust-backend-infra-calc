@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::config::AppConfig;
 use anyhow::Result;
 use aws_config::BehaviorVersion;

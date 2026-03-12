@@ -21,7 +21,7 @@ pub async fn handle_user_sheet(
 ) -> Result<Json<ApiResponse<serde_json::Value>>, StatusCode> {
     if form.delete == Some("yes".to_string()) {
         let file_path = format!("home/{}", form.pagename);
-        if let Err(_) = state.db.delete_file(user_id, &file_path).await {
+        if state.db.delete_file(user_id, &file_path).await.is_err() {
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
         return Ok(Json(ApiResponse::success(

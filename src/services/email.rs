@@ -19,10 +19,11 @@ impl EmailService {
 
         Self {
             client,
-            from_email: config.ses_from_email.clone(),
+            from_email: config.from_email.clone(),
         }
     }
 
+    #[allow(dead_code)]
     pub async fn send_email(&self, to: &str, subject: &str, body: &str) -> Result<(), Error> {
         let dest = Destination::builder().to_addresses(to).build();
 

@@ -1,213 +1,169 @@
 use crate::models::{FileData, InAppPurchase, User};
-use chrono::Utc;
-use sqlx::PgPool;
+use anyhow::Result;
+use mongodb::{bson::Document, Client as MongoClient, Collection, Database as MongoDatabase};
+use sqlx::{mysql::MySqlPoolOptions, MySql, Pool};
+use std::time::Duration;
 use uuid::Uuid;
+
+mod file_repository;
+mod purchase_repository;
+mod user_repository;
+
+pub use file_repository::FileRepository;
+pub use purchase_repository::PurchaseRepository;
+pub use user_repository::UserRepository;
 
 #[derive(Clone)]
 pub struct Database {
-    pool: PgPool,
+    mongo_client: MongoClient,
+    mongo_db: MongoDatabase,
+    mysql_pool: Option<Pool<MySql>>,
 }
 
 impl Database {
-    pub async fn new(database_url: &str) -> anyhow::Result<Self> {
-        let pool = PgPool::connect(database_url).await?;
+    pub async fn new(mongo_uri: &str, mongo_db_name: &str, mysql_dsn: &str) -> Result<Self> {
+        // Connect to MongoDB
+        let mongo_client = MongoClient::with_uri_str(mongo_uri).await?;
+        let mongo_db = mongo_client.database(mongo_db_name);
 
-        // Run migrations
-        sqlx::migrate!("./migrations").run(&pool).await?;
+        // Connect to MySQL
+        let mysql_pool = match Self::connect_mysql(mysql_dsn).await {
+            Ok(pool) => {
+                tracing::info!("MySQL connection established successfully");
+                Some(pool)
+            }
+            Err(e) => {
+                tracing::warn!("MySQL connection failed: {}. Continuing without MySQL.", e);
+                None
+            }
+        };
 
-        Ok(Self { pool })
+        Ok(Self {
+            mongo_client,
+            mongo_db,
+            mysql_pool,
+        })
     }
 
-    // User operations
-    pub async fn create_user(&self, email: &str, password_hash: &str) -> anyhow::Result<User> {
-        let user = sqlx::query_as!(
-            User,
+    async fn connect_mysql(mysql_dsn: &str) -> Result<Pool<MySql>> {
+        let mysql_pool = MySqlPoolOptions::new()
+            .max_connections(5)
+            .acquire_timeout(Duration::from_secs(30))
+            .connect(mysql_dsn)
+            .await?;
+
+        Self::init_mysql_tables(&mysql_pool).await?;
+        Ok(mysql_pool)
+    }
+
+    async fn init_mysql_tables(pool: &Pool<MySql>) -> Result<()> {
+        sqlx::query(
             r#"
-            INSERT INTO users (id, email, password_hash, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, email, password_hash, dongle, created_at, updated_at
+            CREATE TABLE IF NOT EXISTS users (
+                id CHAR(36) PRIMARY KEY,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                dongle VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
             "#,
-            Uuid::new_v4(),
-            email,
-            password_hash,
-            Utc::now(),
-            Utc::now()
         )
-        .fetch_one(&self.pool)
+        .execute(pool)
         .await?;
 
-        Ok(user)
-    }
-
-    pub async fn get_user_by_email(&self, email: &str) -> anyhow::Result<Option<User>> {
-        let user = sqlx::query_as!(
-            User,
-            "SELECT id, email, password_hash, dongle, created_at, updated_at FROM users WHERE email = $1",
-            email
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(user)
-    }
-
-    pub async fn update_user_password(
-        &self,
-        user_id: Uuid,
-        password_hash: &str,
-    ) -> anyhow::Result<()> {
-        sqlx::query!(
-            "UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3",
-            password_hash,
-            Utc::now(),
-            user_id
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
-    }
-
-    pub async fn set_user_dongle(&self, user_id: Uuid, dongle: &str) -> anyhow::Result<()> {
-        sqlx::query!(
-            "UPDATE users SET dongle = $1, updated_at = $2 WHERE id = $3",
-            dongle,
-            Utc::now(),
-            user_id
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
-    }
-
-    // File operations
-    pub async fn create_file(
-        &self,
-        user_id: Uuid,
-        path: &str,
-        content: &str,
-    ) -> anyhow::Result<FileData> {
-        let file = sqlx::query_as!(
-            FileData,
+        sqlx::query(
             r#"
-            INSERT INTO files (id, user_id, path, content, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, user_id, path, content, created_at, updated_at
+            CREATE TABLE IF NOT EXISTS in_app_purchases (
+                id CHAR(36) PRIMARY KEY,
+                user_id CHAR(36) NOT NULL,
+                app_name VARCHAR(255) NOT NULL,
+                owned INT NOT NULL DEFAULT 0,
+                consumed INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
             "#,
-            Uuid::new_v4(),
-            user_id,
-            path,
-            content,
-            Utc::now(),
-            Utc::now()
         )
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(file)
-    }
-
-    pub async fn get_file(&self, user_id: Uuid, path: &str) -> anyhow::Result<Option<FileData>> {
-        let file = sqlx::query_as!(
-            FileData,
-            "SELECT id, user_id, path, content, created_at, updated_at FROM files WHERE user_id = $1 AND path = $2",
-            user_id,
-            path
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(file)
-    }
-
-    pub async fn update_file(
-        &self,
-        user_id: Uuid,
-        path: &str,
-        content: &str,
-    ) -> anyhow::Result<()> {
-        sqlx::query!(
-            "UPDATE files SET content = $1, updated_at = $2 WHERE user_id = $3 AND path = $4",
-            content,
-            Utc::now(),
-            user_id,
-            path
-        )
-        .execute(&self.pool)
+        .execute(pool)
         .await?;
 
         Ok(())
     }
 
-    pub async fn delete_file(&self, user_id: Uuid, path: &str) -> anyhow::Result<()> {
-        sqlx::query!(
-            "DELETE FROM files WHERE user_id = $1 AND path = $2",
-            user_id,
-            path
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
+    pub fn mongo_db(&self) -> &MongoDatabase {
+        &self.mongo_db
     }
 
-    pub async fn list_files(
-        &self,
-        user_id: Uuid,
-        path_prefix: &str,
-    ) -> anyhow::Result<Vec<FileData>> {
-        let files = sqlx::query_as!(
-            FileData,
-            "SELECT id, user_id, path, content, created_at, updated_at FROM files WHERE user_id = $1 AND path LIKE $2",
-            user_id,
-            format!("{}%", path_prefix)
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(files)
+    pub fn mysql_pool(&self) -> Option<&Pool<MySql>> {
+        self.mysql_pool.as_ref()
     }
 
-    // In-app purchase operations
+    #[allow(dead_code)]
+    pub fn mongo_client(&self) -> &MongoClient {
+        &self.mongo_client
+    }
+
+    #[allow(dead_code)] // Used by FileRepository internally
+    fn files_collection(&self) -> Collection<Document> {
+        self.mongo_db.collection("files")
+    }
+
+    pub fn users(&self) -> UserRepository<'_> {
+        UserRepository::new(self.mysql_pool.as_ref())
+    }
+
+    pub fn files(&self) -> FileRepository<'_> {
+        FileRepository::new(&self.mongo_db)
+    }
+
+    pub fn purchases(&self) -> PurchaseRepository<'_> {
+        PurchaseRepository::new(self.mysql_pool.as_ref())
+    }
+
+    pub async fn create_user(&self, email: &str, password_hash: &str) -> Result<User> {
+        self.users().create(email, password_hash).await
+    }
+
+    pub async fn get_user_by_email(&self, email: &str) -> Result<Option<User>> {
+        self.users().get_by_email(email).await
+    }
+
+    pub async fn update_user_password(&self, user_id: Uuid, password_hash: &str) -> Result<()> {
+        self.users().update_password(user_id, password_hash).await
+    }
+
+    pub async fn set_user_dongle(&self, user_id: Uuid, dongle: &str) -> Result<()> {
+        self.users().set_dongle(user_id, dongle).await
+    }
+
+    pub async fn create_file(&self, user_id: Uuid, path: &str, content: &str) -> Result<FileData> {
+        self.files().create(user_id, path, content).await
+    }
+
+    pub async fn get_file(&self, user_id: Uuid, path: &str) -> Result<Option<FileData>> {
+        self.files().get(user_id, path).await
+    }
+
+    pub async fn update_file(&self, user_id: Uuid, path: &str, content: &str) -> Result<()> {
+        self.files().update(user_id, path, content).await
+    }
+
+    pub async fn delete_file(&self, user_id: Uuid, path: &str) -> Result<()> {
+        self.files().delete(user_id, path).await
+    }
+
+    pub async fn list_files(&self, user_id: Uuid, path_prefix: &str) -> Result<Vec<FileData>> {
+        self.files().list(user_id, path_prefix).await
+    }
+
     pub async fn get_or_create_purchase(
         &self,
         user_id: Uuid,
         app_name: &str,
-    ) -> anyhow::Result<InAppPurchase> {
-        // Try to get existing purchase
-        if let Some(purchase) = sqlx::query_as!(
-            InAppPurchase,
-            "SELECT id, user_id, app_name, owned, consumed, created_at, updated_at FROM in_app_purchases WHERE user_id = $1 AND app_name = $2",
-            user_id,
-            app_name
-        )
-        .fetch_optional(&self.pool)
-        .await?
-        {
-            return Ok(purchase);
-        }
-
-        // Create new purchase
-        let purchase = sqlx::query_as!(
-            InAppPurchase,
-            r#"
-            INSERT INTO in_app_purchases (id, user_id, app_name, owned, consumed, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING id, user_id, app_name, owned, consumed, created_at, updated_at
-            "#,
-            Uuid::new_v4(),
-            user_id,
-            app_name,
-            5, // Default 5 saves
-            0, // Default 0 consumed
-            Utc::now(),
-            Utc::now()
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(purchase)
+    ) -> Result<InAppPurchase> {
+        self.purchases().get_or_create(user_id, app_name).await
     }
 
     pub async fn update_purchase(
@@ -216,18 +172,9 @@ impl Database {
         app_name: &str,
         owned: i32,
         consumed: i32,
-    ) -> anyhow::Result<()> {
-        sqlx::query!(
-            "UPDATE in_app_purchases SET owned = $1, consumed = $2, updated_at = $3 WHERE user_id = $4 AND app_name = $5",
-            owned,
-            consumed,
-            Utc::now(),
-            user_id,
-            app_name
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
+    ) -> Result<()> {
+        self.purchases()
+            .update(user_id, app_name, owned, consumed)
+            .await
     }
 }

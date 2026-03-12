@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use rand::Rng;
 
 pub fn generate_random_string(length: usize) -> String {

@@ -5,20 +5,28 @@ use axum::{
     response::Response,
 };
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-//use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{models::Claims, AppState};
+use crate::AppState;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Claims {
+    pub sub: String,
+    pub user_id: String,
+    pub exp: i64,
+}
 
 pub fn hash_password(password: &str) -> anyhow::Result<String> {
     let cost = bcrypt::DEFAULT_COST;
     bcrypt::hash(password, cost).map_err(Into::into)
 }
 
-pub fn verify_password(password: &str, hash: &str) -> bool {
-    bcrypt::verify(password, hash).unwrap_or(false)
+pub fn verify_password(password: &str, hash: &str) -> anyhow::Result<bool> {
+    bcrypt::verify(password, hash).map_err(Into::into)
 }
 
+#[allow(dead_code)]
 pub fn create_jwt(user_id: Uuid, secret: &str) -> anyhow::Result<String> {
     let expiration = chrono::Utc::now()
         .checked_add_signed(chrono::Duration::hours(24))
@@ -27,6 +35,7 @@ pub fn create_jwt(user_id: Uuid, secret: &str) -> anyhow::Result<String> {
 
     let claims = Claims {
         sub: user_id.to_string(),
+        user_id: user_id.to_string(),
         exp: expiration,
     };
 
@@ -39,6 +48,7 @@ pub fn create_jwt(user_id: Uuid, secret: &str) -> anyhow::Result<String> {
     Ok(token)
 }
 
+#[allow(dead_code)]
 pub fn verify_jwt(token: &str, secret: &str) -> anyhow::Result<Claims> {
     let token_data = decode::<Claims>(
         token,
@@ -49,6 +59,7 @@ pub fn verify_jwt(token: &str, secret: &str) -> anyhow::Result<Claims> {
     Ok(token_data.claims)
 }
 
+#[allow(dead_code)]
 pub async fn auth_middleware(
     State(state): State<AppState>,
     mut request: Request,
@@ -79,6 +90,7 @@ pub async fn auth_middleware(
     }
 }
 
+#[allow(dead_code)]
 pub fn generate_random_string(length: usize) -> String {
     use rand::Rng;
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

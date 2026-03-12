@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>TouchCalc Spreadsheet - {{.fname}}</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- SocialCalc CSS -->
+    <link rel="stylesheet" type="text/css" href="/static/css/socialcalc.css" />
+    <link rel="stylesheet" type="text/css" href="/static/css/screen.css" />
+
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background-color: #f5f5f5;
+      }
+      .header {
+        background-color: #2c3e50;
+        color: white;
+        padding: 10px 20px;
+        margin: -20px -20px 20px -20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .spreadsheet-wrapper {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        width: 100%;
+        overflow-x: auto;
+      }
+      #spreadsheet-container {
+        width: 100% !important;
+        height: 600px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      .status-bar {
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #ecf0f1;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #7f8c8d;
+      }
+    </style>
+
+    <!-- Dependencies -->
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/json2.js"></script>
+
+    <!-- SocialCalc Core !! TableEditor before images/spreadsheetcontrol !! -->
+    <script src="/static/js/socialcalcconstants.js"></script>
+    <script src="/static/js/formatnumber2.js"></script>
+    <script src="/static/js/formula1.js"></script>
+    <script src="/static/js/socialcalc-3.js"></script>
+    <script src="/static/js/socialcalctableeditor.js"></script>
+    <script src="/static/js/socialcalcimages.js"></script>
+    <script src="/static/js/socialcalcspreadsheetcontrol.js"></script>
+    <script src="/static/js/socialcalcworkbook.js"></script>
+    <script src="/static/js/socialcalcworkbookcontrol.js"></script>
+    <script src="/static/js/socialcalcpopup.js"></script>
+    <script src="/static/js/socialcalcviewer.js"></script>
+    <script src="/static/js/socialcalctouch.js"></script>
+  </head>
+  <body>
+    <div class="header">
+      <h1>TouchCalc Spreadsheet: {{.fname}}</h1>
+      <div>
+        <span>User: {{.user}}</span>
+        <button
+          onclick="manualSave()"
+          style="
+            margin-left: 20px;
+            padding: 5px 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+          "
+        >
+          Save Now
+        </button>
+      </div>
+    </div>
+
+    <div class="spreadsheet-wrapper">
+      <div id="spreadsheet-container">
+        <div style="padding: 20px; text-align: center; color: #7f8c8d">
+          Loading SocialCalc spreadsheet...
+        </div>
+      </div>
+
+      <div class="status-bar" id="status-bar">
+        Ready - Auto-save enabled (every 30 seconds)
+      </div>
+    </div>
+
+    <script type="text/javascript">
+      // Global variables
+      var spreadsheet;
+      var autoSaveInterval;
+
+      function updateStatus(message) {
+        document.getElementById("status-bar").innerHTML = message;
+        console.log("Status:", message);
+      }
+
+      function initializeSocialCalc() {
+        try {
+          updateStatus("Initializing SocialCalc...");
+          SocialCalc.Constants.defaultImagePrefix = "/static/images/sc-";
+          updateStatus("SocialCalc constants configured...");
+
+          // Create spreadsheet control
+          spreadsheet = new SocialCalc.SpreadsheetControl();
+          spreadsheet.InitializeSpreadsheetControl(
+            "spreadsheet-container",
+            0,
+            0,
+            0
+          );
+          updateStatus("Spreadsheet control created...");
+
+          // Load initial data from server - data is already escaped by server
+          var initialData = "{{.sheetstr}}";
+
+          if (
+            initialData &&
+            initialData.trim() !== "" &&
+            initialData !== "{{.sheetstr}}"
+          ) {
+            try {
+              console.log(
+                "Loading spreadsheet data, length:",
+                initialData.length
+              );
+              spreadsheet.sheet.ParseSheetSave(initialData);
+              updateStatus("Initial data loaded successfully...");
+            } catch (e) {
+              console.error("Error parsing saved data:", e);
+              console.error("Data was:", initialData.substring(0, 200));
+              loadDefaultData();
+            }
+          } else {
+            console.log("No initial data, loading defaults");
+            loadDefaultData();
+          }
+
+          setupAutosave();
+          updateStatus(
+            "✅ SocialCalc initialized successfully - Ready to use!"
+          );
+        } catch (error) {
+          console.error("Error initializing SocialCalc:", error);
+          updateStatus("❌ Error: " + error.message);
+          document.getElementById("spreadsheet-container").innerHTML =
+            '<div style="padding:20px;color:red;text-align:center;">' +
+            "<h3>Error Loading Spreadsheet</h3>" +
+            "<p>" +
+            error.message +
+            "</p>" +
+            "</div>";
+        }
+      }
+
+      function loadDefaultData() {
+        //  ParseSheetSave does not accept '#' or 'part:end' lines
+        var defaultData = `version:1.5
+cell:A1:v:Welcome to TouchCalc
+cell:B1:v:Start editing here
+cell:A2:v:This is your spreadsheet
+cell:B2:v:You can edit any cell
+cell:A3:v:Data saves automatically
+sheet:c:5:r:10:tvf:1`;
+        try {
+          spreadsheet.sheet.ParseSheetSave(defaultData);
+          updateStatus("Default content loaded...");
+        } catch (e) {
+          console.error("Error loading default data:", e);
+          updateStatus("Using empty spreadsheet...");
+        }
+      }
+
+      function setupAutosave() {
+        autoSaveInterval = setInterval(function () {
+          if (spreadsheet && spreadsheet.sheet) {
+            var sheetData = SocialCalc.CreateSheetSave(spreadsheet.sheet);
+            saveToServer(sheetData, false);
+          }
+        }, 30000);
+        updateStatus("✅ Auto-save enabled (every 30 seconds)");
+      }
+
+      function manualSave() {
+        if (spreadsheet && spreadsheet.sheet) {
+          var sheetData = SocialCalc.CreateSheetSave(spreadsheet.sheet);
+          saveToServer(sheetData, true);
+        } else {
+          updateStatus("❌ Cannot save - spreadsheet not initialized");
+        }
+      }
+
+      function saveToServer(data, isManual) {
+        var saveType = isManual ? "Manual" : "Auto";
+        updateStatus(saveType + " save in progress...");
+        $.ajax({
+          url: "/iwebapp",
+          type: "POST",
+          method: "POST",
+          data: {
+            action: "save",
+            filename: "{{.fname}}",
+            content: data,
+            sessionid: "{{.sessionid}}",
+          },
+        })
+          .done(function () {
+            updateStatus(
+              "✅ " +
+                saveType +
+                " save successful at " +
+                new Date().toLocaleTimeString()
+            );
+          })
+          .fail(function (xhr, status, error) {
+            console.error("Save failed:", error);
+            updateStatus("❌ " + saveType + " save failed: " + error);
+          });
+      }
+
+      function checkDependencies() {
+        var missing = [];
+        if (typeof $ === "undefined") missing.push("jQuery");
+        if (typeof JSON === "undefined") missing.push("JSON");
+        if (typeof SocialCalc === "undefined") missing.push("SocialCalc");
+        if (missing.length > 0)
+          throw new Error("Missing dependencies: " + missing.join(", "));
+      }
+
+      $(document).ready(function () {
+        try {
+          checkDependencies();
+          initializeSocialCalc();
+        } catch (error) {
+          console.error("Initialization failed:", error);
+          updateStatus("❌ Failed to load: " + error.message);
+        }
+      });
+    </script>
+  </body>
+</html>

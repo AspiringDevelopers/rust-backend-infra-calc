@@ -8,12 +8,14 @@ use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct RunAsQuery {
     pub sheets: Option<String>,
     pub file: String,
 }
 
+#[allow(dead_code)]
 pub async fn run_app(
     State(state): State<AppState>,
     Extension(user_id): Extension<Uuid>,

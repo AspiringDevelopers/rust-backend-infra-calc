@@ -1,4 +1,5 @@
 pub mod amazon;
+pub mod app;
 pub mod auth;
 pub mod business;
 pub mod download;
@@ -17,13 +18,90 @@ pub mod user_sheet;
 pub mod webapp;
 
 use crate::AppState;
-use axum::{extract::State, response::Json};
+use axum::{
+    extract::State,
+    response::{Html, IntoResponse, Json, Redirect},
+};
+use axum_extra::extract::cookie::CookieJar;
 use serde_json::json;
 
-pub async fn home(State(_state): State<AppState>) -> Json<serde_json::Value> {
+pub async fn health_check(State(state): State<AppState>) -> Json<serde_json::Value> {
     Json(json!({
-        "message": "Aspiring Investments API",
-        "version": "1.0.0",
-        "status": "running"
+        "status": "healthy",
+        "service": "rust-backend-infra-calc",
+        "storage": state.config.storage_backend,
+        "templates_loaded": true,
     }))
+}
+
+pub async fn home(jar: CookieJar) -> Result<Redirect, Redirect> {
+    if get_current_user_id(&jar).is_some() {
+        return Ok(Redirect::to("/dashboard"));
+    }
+    Ok(Redirect::to("/login"))
+}
+
+#[allow(dead_code)]
+pub async fn home_page(State(_state): State<AppState>) -> impl IntoResponse {
+    let html = std::fs::read_to_string("web/templates/home.html")
+        .unwrap_or_else(|_| "<h1>Welcome to TouchCalc</h1>".to_string());
+    Html(html)
+}
+
+#[allow(dead_code)]
+pub async fn test_page() -> impl IntoResponse {
+    let html = std::fs::read_to_string("web/templates/test-page.html").unwrap_or_else(|_| {
+        "<h1>Test Page Not Found</h1><p>Please ensure web/templates/test-page.html exists</p>"
+            .to_string()
+    });
+    Html(html)
+}
+
+pub fn get_current_user(jar: &CookieJar) -> Option<String> {
+    jar.get("user").and_then(|cookie| {
+        let value = cookie.value();
+        if value.starts_with('"') && value.ends_with('"') {
+            serde_json::from_str::<String>(value).ok()
+        } else {
+            Some(value.to_string())
+        }
+    })
+}
+
+pub fn get_current_user_id(jar: &CookieJar) -> Option<uuid::Uuid> {
+    jar.get("user_id")
+        .and_then(|c| uuid::Uuid::parse_str(c.value()).ok())
+}
+
+/// Sets both "user" (email) and "user_id" (uuid) cookies so auth_guard can add Extension<Uuid>.
+pub fn create_user_cookie(
+    email: &str,
+    user_id: uuid::Uuid,
+) -> [axum_extra::extract::cookie::Cookie<'static>; 2] {
+    let user_json = serde_json::to_string(email).unwrap_or_else(|_| format!("\"{}\"", email));
+    let user = axum_extra::extract::cookie::Cookie::build(("user", user_json))
+        .path("/")
+        .http_only(true)
+        .max_age(time::Duration::days(30))
+        .build();
+    let user_id_cookie = axum_extra::extract::cookie::Cookie::build(("user_id", user_id.to_string()))
+        .path("/")
+        .http_only(true)
+        .max_age(time::Duration::days(30))
+        .build();
+    [user, user_id_cookie]
+}
+
+pub fn clear_user_cookie() -> [axum_extra::extract::cookie::Cookie<'static>; 2] {
+    let user = axum_extra::extract::cookie::Cookie::build(("user", ""))
+        .path("/")
+        .http_only(true)
+        .max_age(time::Duration::seconds(0))
+        .build();
+    let user_id = axum_extra::extract::cookie::Cookie::build(("user_id", ""))
+        .path("/")
+        .http_only(true)
+        .max_age(time::Duration::seconds(0))
+        .build();
+    [user, user_id]
 }
